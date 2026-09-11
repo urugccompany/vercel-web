@@ -158,52 +158,137 @@ function setFieldError(field, message) {
 }
 
 /**
- * Sends form data to configured backend (Google Apps Script Web App or local API endpoint)
+ * Format payload for FormSubmit to ensure clean presentation in email table
+ */
+function formatEmailSubmissionPayload(payload) {
+  const isBrand = payload.submission_type === 'Brand';
+  const now = new Date().toLocaleString('en-US', { timeZoneName: 'short' });
+  const subject = isBrand
+    ? `[URUGC Brand Enquiry] ${payload.brand_company || payload.name} — ${payload.name}`
+    : `[URUGC Creator Application] ${payload.name} (${payload.category || 'Creator'})`;
+
+  const emailData = {
+    _subject: subject,
+    _replyto: payload.email,
+    _template: 'table',
+    _captcha: 'false',
+    'Submission Date & Time': now,
+    'Submission Type': payload.submission_type,
+    'Full Name': payload.name,
+    'Email Address': payload.email
+  };
+
+  if (isBrand) {
+    emailData['Brand / Company'] = payload.brand_company || payload.brand || '—';
+    emailData['Campaign Details'] = payload.campaign_details || payload.message || '—';
+  } else {
+    emailData['Social Handle / Profile Link'] = payload.social_profile_link || payload.c_handle || '—';
+    emailData['Primary Category'] = payload.category || payload.c_niche || '—';
+    emailData['Portfolio / Video Reel Link'] = payload.portfolio_link || payload.c_portfolio || '—';
+  }
+
+  return emailData;
+}
+
+/**
+ * Sends form data to configured backend:
+ * 1. Google Apps Script Web App (updates Google Sheet & sends Gmail notification)
+ * 2. FormSubmit endpoint (direct email delivery to urugcgcompany@gmail.com on live domain)
+ * 3. Local Python API (/api/submit) when testing locally
  */
 async function dispatchFormSubmission(payload) {
   const config = window.URUGC_CONFIG || {};
   const googleUrl = config.GOOGLE_SCRIPT_URL && config.GOOGLE_SCRIPT_URL.trim();
-  
-  // Resilient endpoint resolution: works under both http://localhost:8080 and file:/// URL
-  let localUrl = config.LOCAL_API_ENDPOINT || '/api/submit';
-  if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
-    localUrl = 'http://localhost:8080/api/submit';
-  }
+  const recipientEmail = config.RECIPIENT_EMAIL || 'urugcgcompany@gmail.com';
+  const emailEndpoint = config.EMAIL_SUBMISSION_ENDPOINT || `https://formsubmit.co/ajax/${recipientEmail}`;
 
-  // If a Google Apps Script URL is provided, prioritize it
-  const endpoint = googleUrl || localUrl;
+  const isLocal = window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1' ||
+                  window.location.protocol === 'file:' ||
+                  !window.location.origin ||
+                  window.location.origin === 'null';
 
-  // For Google Apps Script, text/plain avoids CORS preflight failures on 302 redirects
-  const isGoogle = !!googleUrl;
-  const fetchOptions = {
-    method: 'POST',
-    headers: {
-      'Content-Type': isGoogle ? 'text/plain;charset=utf-8' : 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  };
+  let success = false;
+  let lastError = null;
 
-  const response = await fetch(endpoint, fetchOptions);
-
-  const contentType = response.headers.get('content-type') || '';
-  let result;
-  if (contentType.includes('application/json')) {
-    result = await response.json();
-  } else {
-    const text = await response.text();
+  // 1. If Google Apps Script Web App is configured, send to Google Sheets
+  if (googleUrl) {
     try {
-      result = JSON.parse(text);
-    } catch (e) {
-      result = { status: response.ok ? 'success' : 'error', message: text };
+      const gRes = await fetch(googleUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (gRes.ok) {
+        success = true;
+      }
+    } catch (err) {
+      console.warn('Google Apps Script request failed, attempting email fallback:', err);
+      lastError = err;
     }
   }
 
-  if (!response.ok || (result && result.status === 'error')) {
-    throw new Error(result?.message || `Server returned status ${response.status}`);
+  // 2. If running locally and Google Apps Script is not configured, send to local API server
+  if (!success && isLocal) {
+    try {
+      let localUrl = config.LOCAL_API_ENDPOINT || '/api/submit';
+      if (window.location.protocol === 'file:' || !window.location.origin || window.location.origin === 'null') {
+        localUrl = 'http://localhost:8080/api/submit';
+      }
+      const localRes = await fetch(localUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (localRes.ok) {
+        success = true;
+      }
+    } catch (err) {
+      console.warn('Local server submission error, trying direct email:', err);
+      lastError = err;
+    }
   }
 
-  return result;
+  // 3. If on live web domain (e.g. Render) OR if Google URL / local server didn't succeed,
+  // submit directly via email endpoint to guarantee notification lands in urugcgcompany@gmail.com
+  if (!success) {
+    try {
+      const emailPayload = formatEmailSubmissionPayload(payload);
+      const emailRes = await fetch(emailEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      if (emailRes.ok) {
+        const json = await emailRes.json().catch(() => ({}));
+        if (json.success === 'true' || json.success === true || json.status === 'success' || !json.error) {
+          success = true;
+        } else {
+          throw new Error(json.message || 'Email delivery failed');
+        }
+      } else {
+        throw new Error(`Email delivery service responded with ${emailRes.status}`);
+      }
+    } catch (err) {
+      console.error('Email delivery error:', err);
+      lastError = err;
+    }
+  }
+
+  if (!success) {
+    throw new Error(lastError ? (lastError.message || String(lastError)) : 'Submission failed. Please try again.');
+  }
+
+  return { status: 'success', message: 'Submission successfully recorded.' };
 }
 
 /* -------------------------------------------------------------------------
