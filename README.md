@@ -15,7 +15,7 @@ A modern, high-end editorial website and creator marketing platform for **URUGC*
 - **Official Domain**: **URUGC.in**
 - **Official Instagram**: **[@urugccompany](https://instagram.com/urugccompany)**
 - **Contact Email**: **urugccompany@gmail.com**
-- **Form Submissions Target**: **urugcgcompany@gmail.com**
+- **Form Submissions Target**: **urugccompany@gmail.com**
 - **Legal Entity**: **URUGC Company**
 
 ### Design & Typography System
@@ -91,7 +91,7 @@ Both forms (**Brand Campaign Enquiry** and **Creator Network Application**) feat
 9. `Campaign Details`
 
 ### Syncing with Google Sheets & Email (`google_apps_script.js`)
-To have submissions automatically append to your Google Sheet and send instant email notifications to `urugcgcompany@gmail.com`:
+To have submissions automatically append to your Google Sheet and send instant email notifications to `urugccompany@gmail.com`:
 
 1. Open [Google Sheets](https://sheets.new) and create a new spreadsheet.
 2. In the menu bar, go to **Extensions** $\rightarrow$ **Apps Script**.

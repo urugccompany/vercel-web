@@ -18,7 +18,7 @@
  */
 
 // Target email for all submission notifications
-const RECIPIENT_EMAIL = "urugcgcompany@gmail.com";
+const RECIPIENT_EMAIL = "urugccompany@gmail.com";
 
 // Standard 9-column header list
 const HEADERS = [

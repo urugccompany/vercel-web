@@ -193,13 +193,13 @@ function formatEmailSubmissionPayload(payload) {
 /**
  * Sends form data to configured backend:
  * 1. Google Apps Script Web App (updates Google Sheet & sends Gmail notification)
- * 2. FormSubmit endpoint (direct email delivery to urugcgcompany@gmail.com on live domain)
+ * 2. FormSubmit endpoint (direct email delivery to urugccompany@gmail.com on live domain)
  * 3. Local Python API (/api/submit) when testing locally
  */
 async function dispatchFormSubmission(payload) {
   const config = window.URUGC_CONFIG || {};
   const googleUrl = config.GOOGLE_SCRIPT_URL && config.GOOGLE_SCRIPT_URL.trim();
-  const recipientEmail = config.RECIPIENT_EMAIL || 'urugcgcompany@gmail.com';
+  const recipientEmail = config.RECIPIENT_EMAIL || 'urugccompany@gmail.com';
   const emailEndpoint = config.EMAIL_SUBMISSION_ENDPOINT || `https://formsubmit.co/ajax/${recipientEmail}`;
 
   const isLocal = window.location.hostname === 'localhost' ||
@@ -255,7 +255,7 @@ async function dispatchFormSubmission(payload) {
   }
 
   // 3. If on live web domain (e.g. Render) OR if Google URL / local server didn't succeed,
-  // submit directly via email endpoint to guarantee notification lands in urugcgcompany@gmail.com
+  // submit directly via email endpoint to guarantee notification lands in urugccompany@gmail.com
   if (!success) {
     try {
       const emailPayload = formatEmailSubmissionPayload(payload);
@@ -299,7 +299,7 @@ window.handleEnquirySubmit = async function(e) {
   const form = document.getElementById('campaign-enquiry-form');
   const feedback = document.getElementById('form-feedback');
   const submitBtn = document.getElementById('submit-enquiry-btn');
-  const recipient = (window.URUGC_CONFIG && window.URUGC_CONFIG.RECIPIENT_EMAIL) || 'urugcgcompany@gmail.com';
+  const recipient = (window.URUGC_CONFIG && window.URUGC_CONFIG.RECIPIENT_EMAIL) || 'urugccompany@gmail.com';
 
   if (!form || !feedback || !submitBtn) return;
 
@@ -408,7 +408,7 @@ window.handleCreatorSubmit = async function(e) {
   const form = document.getElementById('creator-form');
   const feedback = document.getElementById('creator-feedback');
   const submitBtn = document.getElementById('submit-creator-btn') || form.querySelector('button[type="submit"]');
-  const recipient = (window.URUGC_CONFIG && window.URUGC_CONFIG.RECIPIENT_EMAIL) || 'urugcgcompany@gmail.com';
+  const recipient = (window.URUGC_CONFIG && window.URUGC_CONFIG.RECIPIENT_EMAIL) || 'urugccompany@gmail.com';
 
   if (!form || !feedback || !submitBtn) return;
 

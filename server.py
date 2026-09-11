@@ -22,7 +22,7 @@ CSV_PATH = os.path.join(DATA_DIR, "submissions.csv")
 JSON_PATH = os.path.join(DATA_DIR, "submissions.json")
 
 # Environment variables with defaults
-RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL", "urugcgcompany@gmail.com")
+RECIPIENT_EMAIL = os.environ.get("RECIPIENT_EMAIL", "urugccompany@gmail.com")
 GOOGLE_SHEET_WEBHOOK_URL = os.environ.get("GOOGLE_SHEET_WEBHOOK_URL", "")
 
 HEADERS = [
@@ -79,7 +79,7 @@ def record_submission(entry):
     with open(JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(submissions, f, indent=2)
 
-    # 3. Forward to Email (FormSubmit / urugcgcompany@gmail.com)
+    # 3. Forward to Email (FormSubmit / urugccompany@gmail.com)
     forward_to_email(entry)
 
     # 4. Optional: forward to Google Sheet Webhook if configured
