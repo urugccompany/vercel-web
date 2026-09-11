@@ -79,7 +79,10 @@ def record_submission(entry):
     with open(JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(submissions, f, indent=2)
 
-    # 3. Optional: forward to Google Sheet Webhook if configured
+    # 3. Forward to Email (FormSubmit / urugcgcompany@gmail.com)
+    forward_to_email(entry)
+
+    # 4. Optional: forward to Google Sheet Webhook if configured
     if GOOGLE_SHEET_WEBHOOK_URL:
         try:
             req = urllib.request.Request(
@@ -90,6 +93,38 @@ def record_submission(entry):
             urllib.request.urlopen(req, timeout=5)
         except Exception as e:
             print(f"[Warning] Failed to forward to Google Sheets webhook: {e}")
+
+def forward_to_email(entry):
+    try:
+        sub_type = entry.get("submission_type", "General")
+        name = entry.get("name", "")
+        brand = entry.get("brand_company", "")
+        email = entry.get("email", "")
+        
+        subject = f"[URUGC Brand Enquiry] {brand} — {name}" if sub_type == "Brand" else f"[URUGC Creator Application] {name}"
+        payload = {
+            "_subject": subject,
+            "_replyto": email,
+            "_template": "table",
+            "_captcha": "false",
+            "Submission Date & Time": entry.get("submission_date_time", ""),
+            "Submission Type": sub_type,
+            "Full Name": name,
+            "Brand / Company": brand,
+            "Email Address": email,
+            "Social Handle / Profile Link": entry.get("social_profile_link", "—"),
+            "Primary Category": entry.get("category", "—"),
+            "Portfolio / Video Reel Link": entry.get("portfolio_link", "—"),
+            "Campaign Details": entry.get("campaign_details", "—")
+        }
+        req = urllib.request.Request(
+            f"https://formsubmit.co/ajax/{RECIPIENT_EMAIL}",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[Warning] Failed to forward email via FormSubmit: {e}")
 
 class URUGCHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
